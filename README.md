@@ -22,4 +22,4 @@ All libraries are included, assuming the PSPSDK is properly installed, the ctrlH
 
 * uOFW Team - SystemControl libraries and `ctrl.prx` reversing. See [LICENSE_uOFW](LICENSE_uOFW) for licensing information!
 * sajattack - Pointing towards the SystemControl libraries and header.
-* Felix_Dev - Misc. Plugin assistance and an interesting conversation about `sceCtrlReadBufferNegative()`!
+* Felix-Dev - Misc. Plugin assistance and an interesting conversation about `sceCtrlReadBufferNegative()`!
