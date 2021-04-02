@@ -74,6 +74,9 @@ int main_thread(SceSize args, void *argp)
 
     // patch it
     sctrlHENPatchSyscall(hooked_readbuffer_func, sceCtrlReadBufferPositive_patch);
+
+    // Initialize the psp-uart-library
+    pspUARTInit(4800);
  
     return 0;
 }

@@ -12,7 +12,7 @@ CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
 ASFLAGS = $(CFLAGS)
 
 LIBDIR =
-LIBS = -lc -lpspuser -lpspdebug -lpspge libs/libpspsystemctrl_user.a libs/libpspsystemctrl_kernel.a libs/libpspkubridge.a
+LIBS = -lc -lpspuser -lpspdebug -lpspge libs/libpspsystemctrl_user.a libs/libpspsystemctrl_kernel.a libs/libpspkubridge.a libs/libpspuart.a
 LDFLAGS = -nostartfiles 
 
 PSPSDK = $(shell psp-config --pspsdk-path)
