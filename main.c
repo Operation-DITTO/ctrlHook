@@ -25,10 +25,6 @@
 PSP_MODULE_INFO("op_ditto", 0x1000, 0, 1);
 PSP_MAIN_THREAD_ATTR(0);
 
-struct {
-    unsigned char running   :1;
-} booleans = { 0, 0 }; 
-
 void *hooked_readbuffer_func;
 
 static void waitForKernel()
@@ -65,11 +61,7 @@ int main_thread(SceSize args, void *argp)
     // enable analog sampling in the kernel
     sceCtrlSetSamplingMode(PSP_CTRL_MODE_ANALOG);   
 
-    // we are running
-    booleans.running = 1;
-
-    // find it
-    // TODO: this is the addr for 6.6X, so it might not work on lower firmware
+    // grab readbufferpositive from the NID
     hooked_readbuffer_func = (void *)sctrlHENFindFunction("sceController_Service", "sceCtrl", 0x1F803938); 
 
     // patch it
@@ -99,7 +91,6 @@ int module_stop(SceSize args, void *argp)
     SceUID thid;   
     pspSdkReferThreadStatusByName("thread", &thid, NULL);
     
-    booleans.running = 0;   
     sceKernelTerminateThread(thid);
     return 0;
 }
