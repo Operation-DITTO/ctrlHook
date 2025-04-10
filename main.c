@@ -25,7 +25,17 @@
 PSP_MODULE_INFO("op_ditto", 0x1000, 0, 1);
 PSP_MAIN_THREAD_ATTR(0);
 
+void    pspUARTInit(int baud);                                 // Checks if the ringbuffer is empty, returns > 0 if not
+int     pspUARTRead(void);                                  // Returns byte inside of ringbuffer, if empty returns -1
+void    pspUARTWrite(int ch);     
+void pspUARTResetBuff(void);               
+
 void *hooked_readbuffer_func;
+int requestingData = 0;
+int gotXAxis = 0;
+
+int xAxis = 50;
+int yAxis = 0;
 
 static void waitForKernel()
 {
@@ -41,13 +51,48 @@ s32 sceCtrlReadBufferPositive_patch(SceCtrlData *data, u8 nBufs)
 {
     int k1 = pspSdkSetK1(0);
 
+    pspUARTWrite(0xB);
+    int valueX = pspUARTRead();
+    
+    pspUARTResetBuff();
+
+    pspUARTWrite(0xC);
+    int valueY = pspUARTRead();
+
+    if (valueX > 0) {        
+        xAxis = valueX;
+    }
+
+    if (valueY > 0)
+        yAxis = valueY;
+
+    /*if (requestingData == 0) {
+        pspUARTWrite(0xB);
+       // requestingData = 1;
+    } else if (pspUARTAvailable() > 0) {
+        int value = pspUARTRead();
+
+        if (gotXAxis == 0) {
+            gotXAxis = 1;
+            xAxis = value;
+        } else {
+            yAxis = value;
+
+            requestingData = 0;
+            gotXAxis = 0;
+        }
+    }*/
+
+    
+    pspUARTResetBuff();
+
     // create a function ptr to sceCtrlReadBufferPositive() to fill the buttons normally
     s32 (*hooked_readbuffer_func)(SceCtrlData*, u8) = (s32 (*)(SceCtrlData*, u8))sctrlHENFindFunction("sceController_Service", "sceCtrl", 0x1F803938);
     hooked_readbuffer_func(data, nBufs);
 
     // temp - just set the right stick vals
-    data->Rsrv[0] = 69;
-    data->Rsrv[1] = 10;
+    data->Rsrv[0] = xAxis;
+    data->Rsrv[1] = yAxis;
 
     pspSdkSetK1(k1);
     return 0;
@@ -68,7 +113,7 @@ int main_thread(SceSize args, void *argp)
     sctrlHENPatchSyscall(hooked_readbuffer_func, sceCtrlReadBufferPositive_patch);
 
     // Initialize the psp-uart-library
-    pspUARTInit(4800);
+    pspUARTInit(115200);
  
     return 0;
 }
