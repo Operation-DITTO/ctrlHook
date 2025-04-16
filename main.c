@@ -26,8 +26,8 @@
 PSP_MODULE_INFO("op_ditto", 0x1000, 0, 1);
 PSP_MAIN_THREAD_ATTR(0);
 
-void    pspUARTInit(int baud);                                 // Checks if the ringbuffer is empty, returns > 0 if not
-int     pspUARTRead(void);                                  // Returns byte inside of ringbuffer, if empty returns -1
+void    pspUARTInit(int baud);                                 
+int     pspUARTRead(void);                                  
 void    pspUARTWrite(int ch);                
 
 void *hooked_readbuffer_func;
