@@ -17,24 +17,23 @@
 #include <pspkernel.h>
 #include <pspmodulemgr.h>
 #include <psputility_sysparam.h>
-
+#include <stdbool.h>
 #include "systemctrl.h"
 
 #define PSP_KERNEL_MODULE_NAME          "sceKernelLibrary"
+
+#define COMMANDS_RIGHT_ANALOG           0xB
 
 PSP_MODULE_INFO("op_ditto", 0x1000, 0, 1);
 PSP_MAIN_THREAD_ATTR(0);
 
 void    pspUARTInit(int baud);                                 // Checks if the ringbuffer is empty, returns > 0 if not
 int     pspUARTRead(void);                                  // Returns byte inside of ringbuffer, if empty returns -1
-void    pspUARTWrite(int ch);     
-void pspUARTResetBuff(void);               
+void    pspUARTWrite(int ch);                
 
 void *hooked_readbuffer_func;
-int requestingData = 0;
-int gotXAxis = 0;
 
-int xAxis = 50;
+int xAxis = 0;
 int yAxis = 0;
 
 static void waitForKernel()
@@ -46,51 +45,14 @@ static void waitForKernel()
     }
 }
 
-//s32 (*sceCtrlReadBufferPositive)(SceCtrlData *data, u8 nBufs);
 s32 sceCtrlReadBufferPositive_patch(SceCtrlData *data, u8 nBufs)
 {
     int k1 = pspSdkSetK1(0);
-
-    pspUARTWrite(0xB);
-    int valueX = pspUARTRead();
-    
-    pspUARTResetBuff();
-
-    pspUARTWrite(0xC);
-    int valueY = pspUARTRead();
-
-    if (valueX > 0) {        
-        xAxis = valueX;
-    }
-
-    if (valueY > 0)
-        yAxis = valueY;
-
-    /*if (requestingData == 0) {
-        pspUARTWrite(0xB);
-       // requestingData = 1;
-    } else if (pspUARTAvailable() > 0) {
-        int value = pspUARTRead();
-
-        if (gotXAxis == 0) {
-            gotXAxis = 1;
-            xAxis = value;
-        } else {
-            yAxis = value;
-
-            requestingData = 0;
-            gotXAxis = 0;
-        }
-    }*/
-
-    
-    pspUARTResetBuff();
 
     // create a function ptr to sceCtrlReadBufferPositive() to fill the buttons normally
     s32 (*hooked_readbuffer_func)(SceCtrlData*, u8) = (s32 (*)(SceCtrlData*, u8))sctrlHENFindFunction("sceController_Service", "sceCtrl", 0x1F803938);
     hooked_readbuffer_func(data, nBufs);
 
-    // temp - just set the right stick vals
     data->Rsrv[0] = xAxis;
     data->Rsrv[1] = yAxis;
 
@@ -111,9 +73,38 @@ int main_thread(SceSize args, void *argp)
 
     // patch it
     sctrlHENPatchSyscall(hooked_readbuffer_func, sceCtrlReadBufferPositive_patch);
+ 
+    return 0;
+}
+
+int SIO_thread(SceSize args, void *argp)
+{ 
+    // dont do anything until we can confirm all modules are loaded
+    waitForKernel();    
 
     // Initialize the psp-uart-library
     pspUARTInit(115200);
+
+    while (1) {
+        pspUARTWrite(COMMANDS_RIGHT_ANALOG);
+
+        // small delay to wait for response
+        sceKernelDelayThread(100);
+
+        int valueX = pspUARTRead();
+        int valueY = pspUARTRead();
+
+        if (valueX != -1 && valueY != -1) {
+            xAxis = valueX;
+            yAxis = valueY;
+        }
+        // maybe should clear the buffer on else condition
+        // If we didnt get the response to command expected the contents of the buffer could be compromised
+        // Possibly reset stick to center position?
+
+        // May not be needed as we have the delay anove. Doesnt seem to introduce noticeable lag however
+        sceKernelDelayThread(9900);
+    }
  
     return 0;
 }
@@ -127,6 +118,13 @@ int module_start(SceSize args, void *argp)
     if (thid >= 0) {
         sceKernelStartThread(thid, args, argp);
     }
+    
+    SceUID ioThid;
+
+    ioThid = sceKernelCreateThread("IOthread", SIO_thread, 0x18, 0x500, 0, NULL);
+    if (ioThid >= 0) {
+        sceKernelStartThread(ioThid, args, argp);
+    }
     return 0;
 }
 
@@ -137,5 +135,10 @@ int module_stop(SceSize args, void *argp)
     pspSdkReferThreadStatusByName("thread", &thid, NULL);
     
     sceKernelTerminateThread(thid);
+    
+    SceUID ioThid;   
+    pspSdkReferThreadStatusByName("IOthread", &ioThid, NULL);
+    
+    sceKernelTerminateThread(ioThid);
     return 0;
 }
