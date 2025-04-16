@@ -17,7 +17,6 @@
 #include <pspkernel.h>
 #include <pspmodulemgr.h>
 #include <psputility_sysparam.h>
-#include <stdbool.h>
 #include "systemctrl.h"
 
 #define PSP_KERNEL_MODULE_NAME          "sceKernelLibrary"
