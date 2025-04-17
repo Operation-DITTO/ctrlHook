@@ -32,8 +32,8 @@ void    pspUARTWrite(int ch);
 
 void *hooked_readbuffer_func;
 
-int xAxis = 0;
-int yAxis = 0;
+unsigned char xAxis = 0;
+unsigned char yAxis = 0;
 
 static void waitForKernel()
 {
